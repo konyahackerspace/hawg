@@ -1,0 +1,13 @@
+# Decrypted secrets — NEVER commit. Regenerate with: ./scripts/secrets.sh decrypt
+esphome/secrets.yaml
+
+# age private keys, wherever they may wander
+*.agekey
+keys.txt
+
+# ESPHome build artifacts
+esphome/.esphome/
+.esphome/
+
+# macOS noise
+.DS_Store

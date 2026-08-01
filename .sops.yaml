@@ -1,0 +1,10 @@
+# SOPS configuration: which files get encrypted, and who can decrypt them.
+#
+# To get access, add your age public key here (see docs/secrets-management.md),
+# open a PR, and ask an existing keyholder to run: ./scripts/secrets.sh rekey
+creation_rules:
+  - path_regex: secrets/.*\.enc\.yaml$
+    key_groups:
+      - age:
+          # safaorhan
+          - age1zjjzynkv8za4au6kru56lm6pcdfk0sjq0htk8tr0k2dsquvg8pzsveskl2
