@@ -1,0 +1,36 @@
+# pir-1 — PIR motion sensor by the door. Drives the "space open" flag on
+# konyahackerspace.org via homeassistant/packages/presence.yaml.
+# Hardware: ESP32 devkit (esp32dev), PIR module output on GPIO13.
+
+substitutions:
+  name: pir-1
+  friendly_name: PIR 1
+
+packages:
+  base: !include common/base.yaml
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  # 192.168.0.1TN scheme: type 2 (PIR), node 1. See docs/network.md.
+  manual_ip:
+    static_ip: 192.168.0.121
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
+
+binary_sensor:
+  # Name must stay "Motion": HA keys the entity on it, and presence.yaml
+  # reads binary_sensor.pir_sensor_motion.
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: false
+    name: Motion
+    device_class: motion
+    filters:
+      - delayed_off: 5s

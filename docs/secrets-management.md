@@ -90,3 +90,7 @@ then re-flash the nodes.
   (gitignored, but stay alert in PRs).
 - Never paste secrets into issues, chats, or commit messages.
 - Don't copy secrets out of the managed files into other configs.
+- Every node's OTA password must come from `!secret ota_password` (via
+  `common/base.yaml`), never written inline. A node whose OTA password lives
+  only on someone's laptop can't be updated over WiFi, which means physically
+  reaching it with a USB cable (this happened with `pir-1`).

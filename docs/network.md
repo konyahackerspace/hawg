@@ -32,7 +32,7 @@ Node names follow `<type>-<n>` so hostname, YAML file and IP all agree.
 | `.111` | cam-1  | `EC:E3:34:20:FA:F8` | Today: `esphome-web-20faf8` "ESP32-CAM-1"; has a PIR |
 | `.112` | cam-2  | `B0:CB:D8:C6:BD:A0` | Today: `esphome-web-c6bda0` "ESP32-CAM-2" |
 | `.115` | cam-5  | `D4:E9:F4:A1:5A:6C` | Today: `esphome-web-a15a6c` "ESP32-CAM-5" |
-| `.121` | pir-1  | `48:9D:31:E3:49:B8` | Today: `pir-sensor`; drives the website flag |
+| `.121` | pir-1  | `48:9D:31:E3:49:B8` | Live, [`esphome/pir-1.yaml`](../esphome/pir-1.yaml); drives the website flag |
 
 Nodes take their address from `manual_ip` in their ESPHome YAML. Nothing is
 reserved in the router, so this file and the node YAMLs are the whole plan.
