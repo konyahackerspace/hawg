@@ -1,0 +1,9 @@
+# Managed by the hawg repo — this repo is the source of truth.
+# Edits made on the Pi or in the HA UI are overwritten by ./scripts/deploy-ha.sh.
+# See docs/home-assistant.md.
+
+default_config:
+
+homeassistant:
+  # One file per feature in packages/: its automations, helpers and sensors together.
+  packages: !include_dir_named packages

@@ -1,0 +1,45 @@
+# Hackerspace presence: PIR motion -> occupancy -> Firebase RTDB flag,
+# which konyahackerspace.org reads to show whether the space is open.
+
+template:
+  - binary_sensor:
+      # Drives the website flag. Stays on 5 min after the last motion.
+      - name: Hackerspace Occupancy
+        unique_id: hackerspace_occupancy
+        device_class: occupancy
+        state: "{{ is_state('binary_sensor.pir_sensor_motion', 'on') }}"
+        delay_off:
+          seconds: 300
+
+      # Any PIR currently seeing motion. Not wired to anything yet.
+      - name: Hackerspace General Presence
+        unique_id: hackerspace_general_presence
+        device_class: presence
+        state: >
+          {{ is_state('binary_sensor.esp32_cam_1_pir_motion', 'on')
+             or is_state('binary_sensor.pir_sensor_motion', 'on') }}
+
+rest_command:
+  firebase_status_write:
+    # Includes the RTDB auth secret as ?auth=..., hence !secret.
+    url: !secret firebase_status_url
+    method: PUT
+    content_type: "application/json"
+    payload: '{"state": {{ is_state("binary_sensor.hackerspace_occupancy", "on") | lower }}}'
+    timeout: 10
+
+automation:
+  - id: hackerspace_occupancy_write
+    alias: "Hackerspace occupancy -> Firebase"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.hackerspace_occupancy
+      # Resync, so a failed write (e.g. network blip) heals itself instead of
+      # leaving the website wrong until the next state change.
+      - trigger: homeassistant
+        event: start
+      - trigger: time_pattern
+        minutes: "/5"
+    actions:
+      - action: rest_command.firebase_status_write

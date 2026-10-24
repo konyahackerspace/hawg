@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 # Secrets helper for the hawg repo. See docs/secrets-management.md for the full story.
 #
+# Each encrypted file in secrets/ has a decrypted, gitignored counterpart:
+#   secrets/secrets.enc.yaml       <-> esphome/secrets.yaml
+#   secrets/homeassistant.enc.yaml <-> homeassistant/secrets.yaml
+#
 # Usage:
-#   ./scripts/secrets.sh decrypt   # secrets/secrets.enc.yaml -> esphome/secrets.yaml
-#   ./scripts/secrets.sh encrypt   # esphome/secrets.yaml -> secrets/secrets.enc.yaml
-#   ./scripts/secrets.sh edit      # edit encrypted file in place ($EDITOR, never plaintext on disk)
-#   ./scripts/secrets.sh rekey     # re-encrypt after .sops.yaml key list changed
+#   ./scripts/secrets.sh decrypt          # all encrypted files -> plaintext copies
+#   ./scripts/secrets.sh encrypt          # all plaintext copies -> encrypted files
+#   ./scripts/secrets.sh edit [esphome|homeassistant]  # edit in place ($EDITOR, never plaintext on disk)
+#   ./scripts/secrets.sh rekey            # re-encrypt after .sops.yaml key list changed
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENC_FILE="$REPO_ROOT/secrets/secrets.enc.yaml"
-PLAIN_FILE="$REPO_ROOT/esphome/secrets.yaml"
+
+# target -> "encrypted plaintext" (relative to repo root)
+pair() {
+  case "$1" in
+    esphome)       echo "secrets/secrets.enc.yaml esphome/secrets.yaml" ;;
+    homeassistant) echo "secrets/homeassistant.enc.yaml homeassistant/secrets.yaml" ;;
+    *) die "unknown target '$1' (esphome|homeassistant)" ;;
+  esac
+}
+TARGETS="esphome homeassistant"
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -22,26 +34,37 @@ if [ -z "${SOPS_AGE_KEY_FILE:-}" ] && [ -f "$HOME/.config/sops/age/keys.txt" ]; 
   export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 fi
 [ -f "$REPO_ROOT/.sops.yaml" ] || die "no .sops.yaml found — are you in the hawg repo?"
+cd "$REPO_ROOT"
 
 case "${1:-}" in
   decrypt)
-    [ -f "$ENC_FILE" ] || die "$ENC_FILE not found"
-    sops -d "$ENC_FILE" > "$PLAIN_FILE"
-    echo "decrypted -> $PLAIN_FILE (gitignored)"
+    for t in $TARGETS; do
+      read -r enc plain <<<"$(pair "$t")"
+      [ -f "$enc" ] || die "$enc not found"
+      sops -d "$enc" > "$plain"
+      echo "decrypted -> $plain (gitignored)"
+    done
     ;;
   encrypt)
-    [ -f "$PLAIN_FILE" ] || die "$PLAIN_FILE not found — nothing to encrypt"
-    # --filename-override: match the .sops.yaml rule for the *encrypted* path,
-    # since the plaintext input lives elsewhere
-    sops -e --filename-override "$ENC_FILE" "$PLAIN_FILE" > "$ENC_FILE"
-    echo "encrypted -> $ENC_FILE (commit this)"
+    for t in $TARGETS; do
+      read -r enc plain <<<"$(pair "$t")"
+      [ -f "$plain" ] || { echo "skip: $plain not found"; continue; }
+      # --filename-override: match the .sops.yaml rule for the *encrypted* path,
+      # since the plaintext input lives elsewhere
+      sops -e --filename-override "$enc" "$plain" > "$enc"
+      echo "encrypted -> $enc (commit this)"
+    done
     ;;
   edit)
-    sops "$ENC_FILE"
+    read -r enc _ <<<"$(pair "${2:-esphome}")"
+    sops "$enc"
     echo "remember to run: $0 decrypt  (to refresh your local plaintext copy)"
     ;;
   rekey)
-    sops updatekeys "$ENC_FILE"
+    for t in $TARGETS; do
+      read -r enc _ <<<"$(pair "$t")"
+      sops updatekeys -y "$enc"
+    done
     echo "re-encrypted for the keys currently listed in .sops.yaml — commit the result"
     ;;
   *)

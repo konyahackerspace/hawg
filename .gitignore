@@ -1,5 +1,6 @@
 # Decrypted secrets — NEVER commit. Regenerate with: ./scripts/secrets.sh decrypt
 esphome/secrets.yaml
+homeassistant/secrets.yaml
 
 # age private keys, wherever they may wander
 *.agekey

@@ -10,10 +10,14 @@ our devices — so plaintext secrets must never be committed.
 We use [SOPS](https://github.com/getsops/sops) with
 [age](https://github.com/FiloSottile/age) encryption:
 
-- `secrets/secrets.enc.yaml` is the **encrypted** secrets file. It lives in git,
-  is versioned like any other file, and is safe to be public.
-- `esphome/secrets.yaml` is the **decrypted** copy that ESPHome reads at compile
-  time. It exists only on your machine and is gitignored.
+- `secrets/*.enc.yaml` are the **encrypted** secrets files. They live in git,
+  are versioned like any other file, and are safe to be public.
+- Each has a **decrypted** copy that exists only on your machine and is gitignored:
+
+  | Encrypted                        | Decrypted                    | Used by                |
+  | -------------------------------- | ---------------------------- | ---------------------- |
+  | `secrets/secrets.enc.yaml`       | `esphome/secrets.yaml`       | ESPHome, at compile time |
+  | `secrets/homeassistant.enc.yaml` | `homeassistant/secrets.yaml` | HA, copied by `deploy-ha.sh` |
 - `.sops.yaml` lists the age **public keys** of every hawg member allowed to
   decrypt. SOPS encrypts the file so that any one of those keys can open it.
 
@@ -57,14 +61,15 @@ key never leaves their machine.
    ./scripts/secrets.sh decrypt
    ```
 
-   You now have `esphome/secrets.yaml` locally and can compile/flash nodes.
+   You now have the decrypted copies locally and can compile/flash nodes and
+   deploy HA.
 
 ## Day-to-day
 
 | You want to…                       | Run                                    |
 | ---------------------------------- | -------------------------------------- |
 | Get plaintext secrets locally      | `./scripts/secrets.sh decrypt`         |
-| Change a secret                    | `./scripts/secrets.sh edit`, commit    |
+| Change a secret                    | `./scripts/secrets.sh edit [esphome\|homeassistant]`, commit |
 | Re-encrypt after key list changed  | `./scripts/secrets.sh rekey`, commit   |
 
 `edit` opens the encrypted file in `$EDITOR` via SOPS and re-encrypts on save —
@@ -81,6 +86,7 @@ then re-flash the nodes.
 
 ## Rules
 
-- Never commit `esphome/secrets.yaml` (gitignored, but stay alert in PRs).
+- Never commit `esphome/secrets.yaml` or `homeassistant/secrets.yaml`
+  (gitignored, but stay alert in PRs).
 - Never paste secrets into issues, chats, or commit messages.
 - Don't copy secrets out of the managed files into other configs.
