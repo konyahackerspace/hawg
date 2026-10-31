@@ -1,0 +1,48 @@
+# HA heartbeat -> Firebase RTDB, so outages are visible from outside.
+#
+#   /health/last                    server time (ms) of the latest heartbeat
+#   /health/log/<YYYY-MM-DD>/<HH:MM> server time (ms) of that heartbeat, kept 30 days
+#
+# Times in the keys are HA local time (Europe/Istanbul); the values are
+# Firebase's clock, so a wrong Pi clock can't fake freshness. Readers (the
+# website) should fetch /health/last only, not the whole log.
+
+rest_command:
+  firebase_health_heartbeat:
+    # Includes the RTDB auth secret as ?auth=..., hence !secret.
+    url: !secret firebase_health_url
+    method: PATCH
+    content_type: "application/json"
+    payload: >-
+      {{ {"last": {".sv": "timestamp"},
+          "log/" ~ now().strftime("%Y-%m-%d/%H:%M"): {".sv": "timestamp"}}
+         | to_json }}
+    timeout: 10
+
+  firebase_health_prune:
+    url: !secret firebase_health_url
+    method: PATCH
+    content_type: "application/json"
+    # Deletes days 31-37 ago, so a night with HA down doesn't leave a day behind.
+    payload: >-
+      { {%- for i in range(31, 38) %}"log/{{ (now() - timedelta(days=i)).strftime("%Y-%m-%d") }}": null{{ ", " if not loop.last }}{% endfor -%} }
+    timeout: 10
+
+automation:
+  - id: firebase_health_heartbeat
+    alias: "Health heartbeat -> Firebase"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+    actions:
+      - action: rest_command.firebase_health_heartbeat
+
+  - id: firebase_health_prune
+    alias: "Health log prune (30 days)"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "00:05:00"
+    actions:
+      - action: rest_command.firebase_health_prune

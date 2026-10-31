@@ -50,6 +50,18 @@ HA secrets (`!secret ...` in `homeassistant/`) live in
 `secrets/homeassistant.enc.yaml`. `./scripts/secrets.sh decrypt` writes them to
 `homeassistant/secrets.yaml`, and the deploy copies that file to the Pi.
 
+## Health heartbeat
+
+`packages/health.yaml` writes to Firebase RTDB every minute, so an outage of
+HA (or its network) is visible from outside:
+
+- `/health/last`: Firebase server time (ms) of the latest heartbeat. If it's
+  more than a few minutes old, HA is down or offline. The website should read
+  only this.
+- `/health/log/<YYYY-MM-DD>/<HH:MM>`: Firebase server time (ms) per minute
+  (HA local time in the key). Days older than 30 are pruned at 00:05. Gaps in
+  the log are the outages.
+
 ## Integrations (UI-only steps)
 
 Some things can only be set up through the HA UI. Record each one here so a
